@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -80,11 +81,33 @@ func bannerFlagHTTP(target string) {
 
 }
 
+func tlsCapture(target string) {
+	tlsConfig := &tls.Config{
+		VerifyConnection: func(cs tls.ConnectionState) error {
+			fmt.Println("SNI negociado:", cs.ServerName)
+			fmt.Println("Versão TLS:", tls.VersionName(cs.Version))
+			fmt.Println("Cipher Suite:", tls.CipherSuiteName(cs.CipherSuite))
+			return nil
+		},
+	}
+
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+
+	client := &http.Client{Transport: transport}
+
+	resp, err := client.Get(target)
+	if err != nil {
+		panic(err)
+	}
+	resp.Body.Close()
+
+}
+
 func main() {
 	target := "scanme.nmap.org"
 	workers := 100
 
-	//bannerFlagHTTP("http://scanme.nmap.org/")
+	tlsCapture("https://howsmyssl.com")
 
 	ports := make(chan int, workers)
 	result := make(chan int)
